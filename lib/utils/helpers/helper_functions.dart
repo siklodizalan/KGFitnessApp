@@ -83,7 +83,7 @@ class THelperFunctions {
     return MediaQuery.of(Get.context!).size.height;
   }
 
-  static double getScreenWidth() {
+  static double screenWidth() {
     return MediaQuery.of(Get.context!).size.width;
   }
 
@@ -104,5 +104,31 @@ class THelperFunctions {
       wrappedList.add(Row(children: rowChildren));
     }
     return wrappedList;
+  }
+
+  static DateTime getToday() {
+    return DateTime.now();
+  }
+
+  static bool isExtendedMonth(DateTime date) {
+    date = date.toUtc();
+    if (date.month == 2) {
+      return false;
+    }
+
+    final firstDayOfMonth = date.difference(DateTime(date.year, 1, 1, 0, 0));
+    int firstDayInDays = firstDayOfMonth.inDays;
+
+    final dateHelper = DateTime(date.year, date.month + 1, 0, 0, 0);
+    final lastDayOfMonth =
+        dateHelper.difference(DateTime(date.year, 1, 1, 0, 0));
+    int lastDayInDays = lastDayOfMonth.inDays;
+
+    firstDayInDays = firstDayInDays % 7;
+    lastDayInDays = lastDayInDays % 7;
+    if (lastDayInDays < firstDayInDays) {
+      return true;
+    }
+    return false;
   }
 }

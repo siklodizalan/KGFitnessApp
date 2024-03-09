@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1080676928394",
+    "project_id": "kgftraining-bed80",
+    "storage_bucket": "kgftraining-bed80.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1080676928394:android:647ce2479574f3ba595673",
+        "android_client_info": {
+          "package_name": "com.example.kgf_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1080676928394-5kbmopn4kdkjsud2jkbhai4c3khht27e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.kgf_app",
+            "certificate_hash": "6474858b811319e3527dd246bb631016aa3169b0"
+          }
+        },
+        {
+          "client_id": "1080676928394-aqhss5uiq977lm8mfcsi1aodn309vfu0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDawxiCABy-t9PABjV5SFSElnlb85_3tlo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1080676928394-aqhss5uiq977lm8mfcsi1aodn309vfu0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1080676928394-kl4q3b8londf95tosf4fagmdvj5dekto.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.kgfApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

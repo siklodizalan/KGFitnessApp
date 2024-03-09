@@ -5,7 +5,7 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.2.6 <4.0.0"
+  sdk: ">=3.3.0 <4.0.0"
 
 # PACKAGES
 dependencies:
@@ -13,18 +13,35 @@ dependencies:
     sdk: flutter
 
   # Utility Packages
-  http: ^1.1.0
+  http: ^1.2.0
   intl: ^0.19.0
-  logger: ^2.0.1
-  url_launcher: ^6.1.12
+  logger: ^2.0.2
+  lottie: ^3.1.0
+  shimmer: ^3.0.0
+  image_picker: ^1.0.7
+  url_launcher: ^6.2.5
+  connectivity_plus: ^5.0.2
+  flutter_native_splash: ^2.3.2
+  smooth_page_indicator: ^1.1.0
+  table_calendar: ^3.1.0
 
   # Icons
   iconsax: ^0.0.8
-  cupertino_icons: ^1.0.2
+  cupertino_icons: ^1.0.6
 
   # State Management
-  get: ^4.6.5
+  get: ^4.6.6
   get_storage: ^2.1.1
+
+  # Firebase
+  js: ^0.6.3
+  firebase_core_web: ^2.11.4
+  firebase_core: ^2.25.4
+  firebase_auth: ^4.17.5
+  cloud_firestore: ^4.15.5
+  google_sign_in: ^6.2.1
+  firebase_storage: ^11.6.9
+  cached_network_image: ^3.3.1
 
 dev_dependencies:
   flutter_test:
@@ -40,6 +57,8 @@ flutter:
     - assets/logos/
     - assets/icons/
     - assets/images/
+    - assets/images/content/
+    - assets/images/animations/
 
   # Local Fonts
   fonts:
