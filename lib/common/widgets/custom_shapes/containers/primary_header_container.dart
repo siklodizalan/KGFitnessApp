@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kgf_app/common/widgets/custom_shapes/curved_edges/curved_edges_widget.dart';
-import 'package:kgf_app/features/crossfit/screens/class/widgets/vertical_expand_button.dart';
+import 'package:kgf_app/features/personalization/screens/session/widgets/vertical_expand_button.dart';
 import 'package:kgf_app/utils/constants/colors.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -9,7 +9,7 @@ class TPrimaryHeaderContainer extends StatefulWidget {
     super.key,
     required this.child,
     this.onCalendarFormatChanged,
-    this.initialHeight = 225,
+    this.initialHeight = 230,
     this.expandable = true,
   });
 
@@ -59,12 +59,12 @@ class _TPrimaryHeaderContainerState extends State<TPrimaryHeaderContainer> {
                     } else if (details.delta.dy < 0) {
                       widget.onCalendarFormatChanged!(CalendarFormat.week);
                       setState(() {
-                        height = 225;
+                        height = 230;
                       });
                     }
                   },
                   onTap: () {
-                    if (height == 225) {
+                    if (height == 230) {
                       widget.onCalendarFormatChanged!(CalendarFormat.month);
                       setState(() {
                         height = 425;
@@ -72,7 +72,7 @@ class _TPrimaryHeaderContainerState extends State<TPrimaryHeaderContainer> {
                     } else if (height == 425) {
                       widget.onCalendarFormatChanged!(CalendarFormat.week);
                       setState(() {
-                        height = 225;
+                        height = 230;
                       });
                     }
                   },

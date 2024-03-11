@@ -7,7 +7,9 @@ import "package:kgf_app/common/widgets/appbar/appbar.dart";
 import "package:kgf_app/common/widgets/list_tiles/settings_menu_tile.dart";
 import "package:kgf_app/common/widgets/list_tiles/user_profile_tile.dart";
 import "package:kgf_app/common/widgets/texts/section_heading.dart";
+import "package:kgf_app/features/personalization/controllers/session_controller.dart";
 import "package:kgf_app/features/personalization/controllers/user_controller.dart";
+import "package:kgf_app/features/personalization/models/session_model.dart";
 import "package:kgf_app/utils/constants/colors.dart";
 import "package:kgf_app/utils/constants/image_strings.dart";
 import "package:kgf_app/utils/constants/sizes.dart";
@@ -16,24 +18,24 @@ import "package:kgf_app/utils/helpers/helper_functions.dart";
 class SessionDetailsScreen extends StatelessWidget {
   const SessionDetailsScreen({
     super.key,
-    this.sessionName = "Functional Fitness",
-    this.sessionTime = "17:00 - 18:00",
-    this.occupied = "x/15",
-    this.minRequiredPeople = "3",
-    this.userName = "Kulcsar Zoltan",
-    this.userRole = "Coach",
     this.disabledButtons = false,
-    this.bringAFriend = true,
+    required this.session,
   });
 
-  final String sessionName;
-  final String sessionTime;
-  final String occupied;
-  final String minRequiredPeople;
-  final String userName;
-  final String userRole;
   final bool? disabledButtons;
-  final bool? bringAFriend;
+  final SessionModel session;
+
+  Future<Map<String, dynamic>> _fetchUserData(String userId) async {
+    final profilePicture = await UserController.instance
+        .getUserSingleField(userId, 'ProfilePicture');
+    final name =
+        '${await UserController.instance.getUserSingleField(userId, 'FirstName')} ${await UserController.instance.getUserSingleField(userId, 'LastName')}';
+
+    return {
+      'ProfilePicture': profilePicture,
+      'Name': name,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +46,8 @@ class SessionDetailsScreen extends StatelessWidget {
     final ButtonStyle? disabledOutlinedButtonStyle =
         DisabledStyle.getDisabledButtonStyle(
             context, disabledButtons!, OutlinedButton.styleFrom());
-    final controller = Get.put(UserController());
+    final userController = UserController.instance;
+    final sessionController = SessionController.instance;
     return Scaffold(
       appBar: TAppBar(
         showBackArrow: true,
@@ -55,15 +58,16 @@ class SessionDetailsScreen extends StatelessWidget {
         actions: [
           Obx(
             () {
-              if (controller.user.value.role == "COACH" ||
-                  controller.user.value.role == "ADMIN") {
+              if (userController.user.value.role == "COACH" ||
+                  userController.user.value.role == "ADMIN") {
                 return Container(
                   padding: const EdgeInsets.all(TSizes.sm),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       IconButton(
-                          onPressed: () {},
+                          onPressed: () => sessionController
+                              .deleteSessionWarningPopup(session.id),
                           icon: const Icon(CupertinoIcons.delete)),
                       IconButton(
                           onPressed: () {}, icon: const Icon(Iconsax.edit)),
@@ -89,25 +93,25 @@ class SessionDetailsScreen extends StatelessWidget {
                     dark ? TImages.darkAppLogo : TImages.lightAppLogo),
               ),
               TSectionHeading(
-                title: sessionName,
+                title: session.title,
                 showActionButton: false,
               ),
               TSettingsMenuTile(
                 icon: Iconsax.clock,
                 title: "Time",
-                subTitle: sessionTime,
+                subTitle: "${session.fromTime} - ${session.toTime}",
                 onTap: null,
               ),
               TSettingsMenuTile(
                 icon: Iconsax.people,
                 title: "Occupied",
-                subTitle: occupied,
+                subTitle: "${session.occupied}/${session.maxPeople}",
                 onTap: null,
               ),
               TSettingsMenuTile(
                 icon: CupertinoIcons.chevron_right,
                 title: "Minimum People",
-                subTitle: minRequiredPeople,
+                subTitle: "${session.minPeople}",
                 onTap: null,
               ),
               const TSettingsMenuTile(
@@ -122,16 +126,34 @@ class SessionDetailsScreen extends StatelessWidget {
                 title: "Coach",
                 showActionButton: false,
               ),
-              TUserProfileTile(
-                image: TImages.userIcon,
-                width: 50,
-                height: 50,
-                padding: 0,
-                title: userName,
-                color: dark ? TColors.white : TColors.dark,
+              FutureBuilder(
+                future: _fetchUserData(session.userId),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return const Text('Error fetching user data');
+                  } else {
+                    final userData = snapshot.data!;
+                    final networkImage = userData['ProfilePicture'];
+                    final image = networkImage.isNotEmpty
+                        ? networkImage
+                        : TImages.userIcon;
+                    final name = userData['Name'];
+                    return TUserProfileTile(
+                      image: image,
+                      width: 50,
+                      height: 50,
+                      padding: 0,
+                      title: name,
+                      color: dark ? TColors.white : TColors.dark,
+                      isNetworkImage: networkImage.isNotEmpty,
+                    );
+                  }
+                },
               ),
-              if (bringAFriend == true) const Divider(),
-              if (bringAFriend == true)
+              if (session.bringAFriend == true) const Divider(),
+              if (session.bringAFriend == true)
                 Row(
                   children: [
                     SizedBox(
@@ -149,9 +171,9 @@ class SessionDetailsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-              if (bringAFriend == true)
+              if (session.bringAFriend == true)
                 const SizedBox(height: TSizes.spaceBtwItems),
-              if (bringAFriend == false)
+              if (session.bringAFriend == false)
                 const SizedBox(height: TSizes.spaceBtwSections),
               Padding(
                 padding: const EdgeInsets.all(TSizes.spaceBtwItems),

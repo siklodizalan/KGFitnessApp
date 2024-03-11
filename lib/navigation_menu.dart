@@ -1,7 +1,7 @@
 import "package:flutter/material.dart";
 import "package:get/get.dart";
 import "package:iconsax/iconsax.dart";
-import 'package:kgf_app/features/crossfit/screens/class/class_signup.dart';
+import 'package:kgf_app/features/personalization/screens/session/session_signup.dart';
 import 'package:kgf_app/features/personalization/screens/profile/profile.dart';
 import "package:kgf_app/utils/constants/colors.dart";
 import "package:kgf_app/utils/helpers/helper_functions.dart";
@@ -39,5 +39,5 @@ class NavigationMenu extends StatelessWidget {
 
 class NavigationController extends GetxController {
   final Rx<int> selectedIndex = 0.obs;
-  final screens = [const ClassSignupScreen(), const ProfileScreen()];
+  final screens = [const SessionSignupScreen(), const ProfileScreen()];
 }

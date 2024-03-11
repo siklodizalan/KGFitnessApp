@@ -10,9 +10,11 @@ class TTableCalendar extends StatefulWidget {
   const TTableCalendar({
     super.key,
     this.calendarFormat = CalendarFormat.week,
+    required this.onFocusedDayChanged,
   });
 
   final CalendarFormat calendarFormat;
+  final Function(DateTime) onFocusedDayChanged;
 
   @override
   _TTableCalendarState createState() => _TTableCalendarState();
@@ -85,6 +87,7 @@ class _TTableCalendarState extends State<TTableCalendar> {
         setState(() {
           _focusedDay = focusedDay;
         });
+        widget.onFocusedDayChanged(focusedDay);
       },
       availableGestures: AvailableGestures.all,
     );

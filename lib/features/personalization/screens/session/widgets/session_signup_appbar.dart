@@ -9,8 +9,8 @@ import 'package:kgf_app/utils/constants/colors.dart';
 import 'package:kgf_app/utils/constants/sizes.dart';
 import 'package:kgf_app/utils/constants/text_strings.dart';
 
-class TClassSignupAppBar extends StatelessWidget {
-  const TClassSignupAppBar({
+class TSessionSignupAppBar extends StatelessWidget {
+  const TSessionSignupAppBar({
     super.key,
   });
 

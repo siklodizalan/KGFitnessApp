@@ -1,23 +1,28 @@
 import "package:flutter/material.dart";
-import "package:get/get.dart";
 import 'package:kgf_app/common/widgets/calendar/calendar.dart';
 import "package:kgf_app/common/widgets/custom_shapes/containers/primary_header_container.dart";
-import "package:kgf_app/common/widgets/login_signup/form_divider.dart";
-import "package:kgf_app/features/crossfit/screens/class/widgets/class_signup_appbar.dart";
+import "package:kgf_app/features/personalization/screens/session/widgets/session_signup_appbar.dart";
 import "package:kgf_app/features/personalization/screens/session/session.dart";
 import "package:kgf_app/utils/constants/sizes.dart";
-import "package:kgf_app/utils/constants/text_strings.dart";
+import "package:kgf_app/utils/helpers/helper_functions.dart";
 import "package:table_calendar/table_calendar.dart";
 
-class ClassSignupScreen extends StatefulWidget {
-  const ClassSignupScreen({super.key});
+class SessionSignupScreen extends StatefulWidget {
+  const SessionSignupScreen({super.key});
 
   @override
-  _ClassSignupScreenState createState() => _ClassSignupScreenState();
+  _SessionSignupScreenState createState() => _SessionSignupScreenState();
 }
 
-class _ClassSignupScreenState extends State<ClassSignupScreen> {
+class _SessionSignupScreenState extends State<SessionSignupScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.week;
+  late DateTime _focusedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusedDay = THelperFunctions.getToday();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,17 +38,20 @@ class _ClassSignupScreenState extends State<ClassSignupScreen> {
               },
               child: Column(
                 children: [
-                  const TClassSignupAppBar(),
+                  const TSessionSignupAppBar(),
                   TTableCalendar(
                     calendarFormat: _calendarFormat,
+                    onFocusedDayChanged: (focusedDay) {
+                      setState(() {
+                        _focusedDay = focusedDay;
+                      });
+                    },
                   ),
                 ],
               ),
             ),
             const SizedBox(height: TSizes.spaceBtwSections / 2),
-            TFormDivider(
-                dividerText: "x ${TTexts.scheduledSessions.capitalize!}"),
-            const UserSessionScreen(),
+            UserSessionScreen(focusedDay: _focusedDay),
           ],
         ),
       ),

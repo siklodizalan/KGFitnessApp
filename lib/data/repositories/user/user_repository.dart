@@ -52,6 +52,27 @@ class UserRepository extends GetxController {
     }
   }
 
+  Future<String> fetchUserSingleField(String userId, String fieldName) async {
+    try {
+      DocumentSnapshot documentSnapshot =
+          await _db.collection('Users').doc(userId).get();
+      if (documentSnapshot.exists) {
+        dynamic fieldValue = documentSnapshot.get(fieldName);
+        return fieldValue.toString();
+      } else {
+        return '';
+      }
+    } on FirebaseException catch (e) {
+      throw TFirebaseException(e.code).message;
+    } on FormatException catch (_) {
+      throw const TFormatException();
+    } on PlatformException catch (e) {
+      throw TPlatformException(e.code).message;
+    } catch (e) {
+      throw 'Something went wrong. Please try again.';
+    }
+  }
+
   Future<void> updateUserDetails(UserModel updatedUser) async {
     try {
       await _db

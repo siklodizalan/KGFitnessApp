@@ -1,11 +1,14 @@
 import "package:flutter/cupertino.dart";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
+import "package:get/get.dart";
 import "package:iconsax/iconsax.dart";
 import "package:kgf_app/common/widgets/appbar/appbar.dart";
 import "package:kgf_app/common/widgets/texts/section_heading.dart";
+import "package:kgf_app/features/personalization/controllers/session_controller.dart";
 import "package:kgf_app/utils/constants/sizes.dart";
 import "package:kgf_app/utils/helpers/helper_functions.dart";
+import "package:kgf_app/utils/validators/validation.dart";
 
 class AddNewSessionScreen extends StatefulWidget {
   const AddNewSessionScreen({super.key});
@@ -30,12 +33,19 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
         );
       },
     );
+    final controller = SessionController.instance;
     if (picked != null) {
       setState(() {
         if (isFrom) {
           selectedFromTime = picked;
+          controller.timeFrom.text = selectedFromTime != null
+              ? '${selectedFromTime!.hour.toString().padLeft(2, '0')}:${selectedFromTime!.minute.toString().padLeft(2, '0')}'
+              : '';
         } else {
           selectedToTime = picked;
+          controller.timeTo.text = selectedToTime != null
+              ? '${selectedToTime!.hour.toString().padLeft(2, '0')}:${selectedToTime!.minute.toString().padLeft(2, '0')}'
+              : '';
         }
       });
     }
@@ -48,17 +58,31 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
       firstDate: DateTime.utc(2023, 12, 1),
       lastDate: DateTime.utc(2030, 1, 31),
     );
-
+    final controller = SessionController.instance;
     if (picked != null) {
       setState(() {
         selectedDay = picked;
+        controller.date.text = picked.toString().split(" ")[0];
       });
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    final controller = Get.put(SessionController());
+    controller.date.text = selectedDay.toString().split(" ")[0];
+    controller.timeFrom.text = selectedFromTime != null
+        ? '${selectedFromTime!.hour.toString().padLeft(2, '0')}:${selectedFromTime!.minute.toString().padLeft(2, '0')}'
+        : '';
+    controller.timeTo.text = selectedToTime != null
+        ? '${selectedToTime!.hour.toString().padLeft(2, '0')}:${selectedToTime!.minute.toString().padLeft(2, '0')}'
+        : '';
+  }
+
+  @override
   Widget build(BuildContext context) {
-    String dropdownValue = 'No repeat';
+    final controller = SessionController.instance;
     return Scaffold(
       appBar:
           const TAppBar(showBackArrow: true, title: Text('Add new Session')),
@@ -66,6 +90,7 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
         child: Padding(
           padding: const EdgeInsets.all(TSizes.defaultSpace),
           child: Form(
+            key: controller.sessionFormKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -75,6 +100,9 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                 ),
                 const SizedBox(height: TSizes.sm),
                 TextFormField(
+                  controller: controller.title,
+                  validator: (value) =>
+                      TValidator.validateEmptyText('Title', value),
                   decoration: const InputDecoration(
                       prefixIcon: Icon(CupertinoIcons.text_cursor),
                       labelText: 'Title'),
@@ -86,6 +114,9 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                 ),
                 const SizedBox(height: TSizes.sm),
                 TextFormField(
+                  controller: controller.date,
+                  validator: (value) =>
+                      TValidator.validateEmptyText('Date', value),
                   decoration: const InputDecoration(
                     labelText: 'Date',
                     prefixIcon: Icon(Iconsax.calendar_1),
@@ -95,9 +126,6 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                   onTap: () {
                     _selectDate();
                   },
-                  controller: TextEditingController(
-                    text: selectedDay.toString().split(" ")[0],
-                  ),
                 ),
                 const SizedBox(height: TSizes.spaceBtwInputFields),
                 const TSectionHeading(
@@ -112,16 +140,14 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                         onTap: () => _selectTime(context, true),
                         child: AbsorbPointer(
                           child: TextFormField(
+                            validator: (value) =>
+                                TValidator.validateEmptyText('Time', value),
                             decoration: const InputDecoration(
                               prefixIcon: Icon(CupertinoIcons.clock),
                               labelText: 'From',
                               suffixIcon: Icon(Icons.arrow_drop_down),
                             ),
-                            controller: TextEditingController(
-                              text: selectedFromTime != null
-                                  ? '${selectedFromTime!.hour.toString().padLeft(2, '0')}:${selectedFromTime!.minute.toString().padLeft(2, '0')}'
-                                  : '',
-                            ),
+                            controller: controller.timeFrom,
                           ),
                         ),
                       ),
@@ -132,15 +158,13 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                         onTap: () => _selectTime(context, false),
                         child: AbsorbPointer(
                           child: TextFormField(
+                            validator: (value) =>
+                                TValidator.validateEmptyText('Time', value),
                             decoration: const InputDecoration(
                                 prefixIcon: Icon(CupertinoIcons.clock),
                                 labelText: 'To',
                                 suffixIcon: Icon(Icons.arrow_drop_down)),
-                            controller: TextEditingController(
-                              text: selectedToTime != null
-                                  ? '${selectedToTime!.hour.toString().padLeft(2, '0')}:${selectedToTime!.minute.toString().padLeft(2, '0')}'
-                                  : '',
-                            ),
+                            controller: controller.timeTo,
                           ),
                         ),
                       ),
@@ -157,6 +181,9 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                   children: [
                     Expanded(
                       child: TextFormField(
+                        controller: controller.minPeople,
+                        validator: (value) => TValidator.validateEmptyText(
+                            'Minimum number of people', value),
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
@@ -169,6 +196,9 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                     const SizedBox(width: TSizes.spaceBtwInputFields),
                     Expanded(
                       child: TextFormField(
+                        controller: controller.maxPeople,
+                        validator: (value) => TValidator.validateEmptyText(
+                            'Maximum number of people', value),
                         keyboardType: TextInputType.number,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
@@ -187,10 +217,14 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                 ),
                 const SizedBox(height: TSizes.sm),
                 DropdownButtonFormField(
-                  value: dropdownValue,
+                  value: controller.repeat.value,
                   decoration:
                       const InputDecoration(prefixIcon: Icon(Iconsax.sort)),
-                  onChanged: (value) {},
+                  onChanged: (value) {
+                    setState(() {
+                      controller.repeat.value = value.toString();
+                    });
+                  },
                   items: [
                     'No repeat',
                     'Every Day',
@@ -213,8 +247,12 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                       width: 32,
                       height: 32,
                       child: Checkbox(
-                        value: true,
-                        onChanged: (value) {},
+                        value: controller.bringAFriend.value,
+                        onChanged: (value) {
+                          setState(() {
+                            controller.bringAFriend.value = value!;
+                          });
+                        },
                       ),
                     ),
                     const SizedBox(width: TSizes.spaceBtwItems / 2),
@@ -228,7 +266,8 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                      onPressed: () {}, child: const Text('Save')),
+                      onPressed: () => controller.addNewSession(),
+                      child: const Text('Save')),
                 )
               ],
             ),

@@ -44,6 +44,15 @@ class UserController extends GetxController {
     }
   }
 
+  Future<String> getUserSingleField(String userId, String fieldName) async {
+    try {
+      return await userRepository.fetchUserSingleField(userId, fieldName);
+    } catch (e) {
+      TLoaders.errorSnackBar(title: 'User not found!', message: e.toString());
+      return '';
+    }
+  }
+
   Future<void> saveUserRecord(UserCredential? userCredentials) async {
     try {
       await fetchUserRecord();
