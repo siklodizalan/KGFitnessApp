@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:kgf_app/data/repositories/authentication/authentication_repository.dart';
 import 'package:kgf_app/data/repositories/session/session_repository.dart';
 import 'package:kgf_app/features/personalization/controllers/user_controller.dart';
 import 'package:kgf_app/features/personalization/models/session_model.dart';
+import 'package:kgf_app/features/personalization/screens/session/add_new_session.dart';
+import 'package:kgf_app/utils/constants/colors.dart';
 import 'package:kgf_app/utils/constants/image_strings.dart';
 import 'package:kgf_app/utils/constants/sizes.dart';
 import 'package:kgf_app/utils/helpers/network_manager.dart';
@@ -14,14 +19,15 @@ class SessionController extends GetxController {
   static SessionController get instance => Get.find();
 
   /// Variables
-  final title = TextEditingController();
-  final date = TextEditingController();
-  final timeFrom = TextEditingController();
-  final timeTo = TextEditingController();
-  final minPeople = TextEditingController();
-  final maxPeople = TextEditingController();
+  var title = TextEditingController();
+  var date = TextEditingController();
+  var timeFrom = TextEditingController();
+  var timeTo = TextEditingController();
+  var minPeople = TextEditingController();
+  var maxPeople = TextEditingController();
   RxString repeat = 'No repeat'.obs;
   var bringAFriend = false.obs;
+  var occupied = 0;
   GlobalKey<FormState> sessionFormKey = GlobalKey<FormState>();
 
   RxBool refreshData = true.obs;
@@ -40,6 +46,28 @@ class SessionController extends GetxController {
     }
   }
 
+  Future<List<SessionModel>> getAllActiveSessionsByDate(DateTime date) async {
+    try {
+      final sessions = await sessionRepository.fetchActiveSessionsByDate(date);
+      sessions.sort((a, b) => a.fromTime.compareTo(b.fromTime));
+      return sessions;
+    } catch (e) {
+      TLoaders.errorSnackBar(
+          title: 'Sessions not found!', message: e.toString());
+      return [];
+    }
+  }
+
+  Future<SessionModel> getSessionById(String sessionId) async {
+    try {
+      return await sessionRepository.fetchSessionById(sessionId);
+    } catch (e) {
+      TLoaders.errorSnackBar(
+          title: 'Sessions not found!', message: e.toString());
+      return SessionModel.empty();
+    }
+  }
+
   Future<String> getSessionSingleField(
       String sessionId, String fieldName) async {
     try {
@@ -49,6 +77,16 @@ class SessionController extends GetxController {
       TLoaders.errorSnackBar(
           title: 'Session not found!', message: e.toString());
       return '';
+    }
+  }
+
+  Future<void> setSessionSingleField(
+      String sessionId, Map<String, dynamic> json) async {
+    try {
+      await sessionRepository.updateSessionSingleField(sessionId, json);
+    } catch (e) {
+      TLoaders.errorSnackBar(
+          title: 'Session update failed!', message: e.toString());
     }
   }
 
@@ -292,6 +330,152 @@ class SessionController extends GetxController {
     } catch (e) {
       TFullScreenLoader.stopLoading();
       TLoaders.errorSnackBar(title: 'Oh Snap!', message: e.toString());
+    }
+  }
+
+  void editSessionChoosePopup(String sessionId, String repeatId) async {
+    Get.defaultDialog(
+      contentPadding: const EdgeInsets.all(TSizes.md),
+      title: 'Edit Session',
+      middleText:
+          'Do you want to edit only this session or edit all repeat sessions as well?',
+      confirm: ElevatedButton(
+        onPressed: () async => {
+          await setUpEditSession(sessionId),
+          Get.back(),
+          Get.to(
+            () => AddNewSessionScreen(
+              sessionId: sessionId,
+              repeatId: repeatId,
+              editAllRepeat: false,
+            ),
+          ),
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: TColors.primary,
+          side: const BorderSide(color: TColors.primary),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: TSizes.lg),
+          child: Text('Edit only this'),
+        ),
+      ),
+      cancel: ElevatedButton(
+        onPressed: () async => {
+          await setUpEditSession(sessionId),
+          Get.back(),
+          Get.to(
+            () => AddNewSessionScreen(
+              sessionId: sessionId,
+              repeatId: repeatId,
+              editAllRepeat: true,
+            ),
+          ),
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: TColors.primary,
+          side: const BorderSide(color: TColors.primary),
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: TSizes.lg),
+          child: Text('Edit all repeat'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> setUpEditSession(String sessionId) async {
+    if (sessionId != '') {
+      final controller = SessionController.instance;
+      SessionModel editSession = await controller.getSessionById(sessionId);
+      controller.repeat.value = editSession.repeat;
+      controller.bringAFriend.value = editSession.bringAFriend;
+      controller.title.text = editSession.title;
+      controller.date.text = DateFormat('yyyy-MM-dd')
+          .format(DateTime.fromMillisecondsSinceEpoch(editSession.date));
+      controller.timeFrom.text = editSession.fromTime;
+      controller.timeTo.text = editSession.toTime;
+      controller.minPeople.text = editSession.minPeople.toString();
+      controller.maxPeople.text = editSession.maxPeople.toString();
+      controller.occupied = editSession.occupied;
+    }
+  }
+
+  Future editSession(
+      bool editAllRepeat, String sessionId, String repeatId) async {
+    try {
+      TFullScreenLoader.openLoadingDialog(
+          'Updating session...', TImages.docerAnimation);
+
+      final isConnected = await NetworkManager.instance.isConnected();
+      if (!isConnected) {
+        TFullScreenLoader.stopLoading();
+        return;
+      }
+
+      if (!sessionFormKey.currentState!.validate()) {
+        TFullScreenLoader.stopLoading();
+        return;
+      }
+
+      final controller = SessionController.instance;
+      SessionModel originalSession = await controller.getSessionById(sessionId);
+      final session = SessionModel(
+        id: sessionId,
+        userId: originalSession.userId,
+        title: title.text.trim(),
+        date: originalSession.date,
+        fromTime: timeFrom.text.trim(),
+        toTime: timeTo.text.trim(),
+        minPeople: int.parse(minPeople.text.trim()),
+        maxPeople: int.parse(maxPeople.text.trim()),
+        occupied: occupied,
+        repeat: originalSession.repeat,
+        repeatId: repeatId,
+        bringAFriend: bringAFriend.value,
+      );
+
+      if (!editAllRepeat) {
+        await sessionRepository.updateSession(session);
+      } else {
+        await sessionRepository.updateSession(session);
+        SessionModel originalRepeatSession =
+            await sessionRepository.fetchRepeatSessionById(repeatId);
+        final repeatSession = SessionModel(
+          id: repeatId,
+          userId: originalRepeatSession.userId,
+          title: title.text.trim(),
+          date: originalRepeatSession.date,
+          fromTime: timeFrom.text.trim(),
+          toTime: timeTo.text.trim(),
+          minPeople: int.parse(minPeople.text.trim()),
+          maxPeople: int.parse(maxPeople.text.trim()),
+          occupied: occupied,
+          repeat: originalRepeatSession.repeat,
+          repeatId: '',
+          bringAFriend: bringAFriend.value,
+        );
+        await sessionRepository.updateRepeatSession(repeatSession);
+        List<SessionModel> editableSessions =
+            await sessionRepository.fetchFutureSessionsByRepeatId(repeatId);
+        for (SessionModel editableSession in editableSessions) {
+          session.id = editableSession.id;
+          session.date = editableSession.date;
+          session.occupied = editableSession.occupied;
+          await sessionRepository.updateSession(session);
+        }
+      }
+
+      refreshData.toggle();
+      TFullScreenLoader.stopLoading();
+      Navigator.of(Get.context!).popUntil((route) => route.isFirst);
+      TLoaders.successSnackBar(
+          title: 'Congratulations!',
+          message: 'Your session has been updated successfully.');
+    } catch (e) {
+      TFullScreenLoader.stopLoading();
+      TLoaders.errorSnackBar(
+          title: 'Session not found!', message: e.toString());
     }
   }
 }

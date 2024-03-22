@@ -11,7 +11,16 @@ import "package:kgf_app/utils/helpers/helper_functions.dart";
 import "package:kgf_app/utils/validators/validation.dart";
 
 class AddNewSessionScreen extends StatefulWidget {
-  const AddNewSessionScreen({super.key});
+  const AddNewSessionScreen({
+    super.key,
+    this.sessionId,
+    this.repeatId,
+    this.editAllRepeat = false,
+  });
+
+  final String? sessionId;
+  final String? repeatId;
+  final bool editAllRepeat;
 
   @override
   _AddNewSessionScreenState createState() => _AddNewSessionScreenState();
@@ -21,6 +30,21 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
   TimeOfDay? selectedFromTime;
   TimeOfDay? selectedToTime;
   DateTime? selectedDay = THelperFunctions.getToday();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.sessionId == null || widget.sessionId == '') {
+      final controller = Get.put(SessionController());
+      controller.date.text = selectedDay.toString().split(" ")[0];
+      controller.timeFrom.text = selectedFromTime != null
+          ? '${selectedFromTime!.hour.toString().padLeft(2, '0')}:${selectedFromTime!.minute.toString().padLeft(2, '0')}'
+          : '';
+      controller.timeTo.text = selectedToTime != null
+          ? '${selectedToTime!.hour.toString().padLeft(2, '0')}:${selectedToTime!.minute.toString().padLeft(2, '0')}'
+          : '';
+    }
+  }
 
   Future<void> _selectTime(BuildContext context, bool isFrom) async {
     final TimeOfDay? picked = await showTimePicker(
@@ -68,24 +92,14 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    final controller = Get.put(SessionController());
-    controller.date.text = selectedDay.toString().split(" ")[0];
-    controller.timeFrom.text = selectedFromTime != null
-        ? '${selectedFromTime!.hour.toString().padLeft(2, '0')}:${selectedFromTime!.minute.toString().padLeft(2, '0')}'
-        : '';
-    controller.timeTo.text = selectedToTime != null
-        ? '${selectedToTime!.hour.toString().padLeft(2, '0')}:${selectedToTime!.minute.toString().padLeft(2, '0')}'
-        : '';
-  }
-
-  @override
   Widget build(BuildContext context) {
     final controller = SessionController.instance;
     return Scaffold(
-      appBar:
-          const TAppBar(showBackArrow: true, title: Text('Add new Session')),
+      appBar: TAppBar(
+          showBackArrow: true,
+          title: widget.sessionId == null || widget.sessionId == ''
+              ? const Text('Add new Session')
+              : const Text('Edit Session')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(TSizes.defaultSpace),
@@ -114,6 +128,7 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                 ),
                 const SizedBox(height: TSizes.sm),
                 TextFormField(
+                  enabled: (widget.sessionId == null || widget.sessionId == ''),
                   controller: controller.date,
                   validator: (value) =>
                       TValidator.validateEmptyText('Date', value),
@@ -220,16 +235,19 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                   value: controller.repeat.value,
                   decoration:
                       const InputDecoration(prefixIcon: Icon(Iconsax.sort)),
-                  onChanged: (value) {
-                    setState(() {
-                      controller.repeat.value = value.toString();
-                    });
-                  },
+                  onChanged:
+                      (widget.sessionId != null && widget.sessionId != '')
+                          ? null
+                          : (value) {
+                              setState(() {
+                                controller.repeat.value = value.toString();
+                              });
+                            },
                   items: [
                     'No repeat',
                     'Every Day',
                     'Every Weekday',
-                    'Once a Week'
+                    'Once a Week',
                   ]
                       .map((option) =>
                           DropdownMenuItem(value: option, child: Text(option)))
@@ -266,7 +284,11 @@ class _AddNewSessionScreenState extends State<AddNewSessionScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                      onPressed: () => controller.addNewSession(),
+                      onPressed: () =>
+                          (widget.sessionId != null && widget.sessionId != '')
+                              ? controller.editSession(widget.editAllRepeat,
+                                  widget.sessionId!, widget.repeatId!)
+                              : controller.addNewSession(),
                       child: const Text('Save')),
                 )
               ],

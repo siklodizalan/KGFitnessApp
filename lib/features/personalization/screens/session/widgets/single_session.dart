@@ -1,8 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:kgf_app/common/styles/disabled_style.dart';
 import 'package:kgf_app/common/widgets/custom_shapes/containers/rounded_container.dart';
 import 'package:kgf_app/common/widgets/list_tiles/user_profile_tile.dart';
+import 'package:kgf_app/features/personalization/controllers/attendance_controller.dart';
+import 'package:kgf_app/features/personalization/controllers/session_controller.dart';
 import 'package:kgf_app/features/personalization/controllers/user_controller.dart';
 import 'package:kgf_app/features/personalization/models/session_model.dart';
 import 'package:kgf_app/utils/constants/colors.dart';
@@ -68,21 +71,8 @@ class _TSingleSessionState extends State<TSingleSession> {
         : dark
             ? TColors.white
             : TColors.dark;
-    final Color joinIconColor = widget.iconsDisabled!
-        ? Theme.of(context).disabledColor
-        : dark
-            ? TColors.light
-            : TColors.dark;
-    final Color leaveIconColor = widget.iconsDisabled!
-        ? Theme.of(context).disabledColor
-        : dark
-            ? _selectedSession
-                ? TColors.light
-                : TColors.light.withOpacity(0.5)
-            : _selectedSession
-                ? TColors.dark
-                : TColors.dark.withOpacity(0.5);
-
+    final attendanceController = AttendanceController.instance;
+    final sessionController = SessionController.instance;
     return FutureBuilder<Map<String, dynamic>>(
       future: _userDataFuture,
       builder: (context, snapshot) {
@@ -101,8 +91,14 @@ class _TSingleSessionState extends State<TSingleSession> {
             padding: const EdgeInsets.only(
                 top: TSizes.md, right: TSizes.md, left: TSizes.md),
             width: double.infinity,
-            backgroundColor: Colors.transparent,
-            borderColor: dark ? TColors.darkerGrey : TColors.grey,
+            backgroundColor: _selectedSession
+                ? TColors.primary.withOpacity(0.5)
+                : Colors.transparent,
+            borderColor: _selectedSession
+                ? Colors.transparent
+                : dark
+                    ? TColors.darkerGrey
+                    : TColors.grey,
             margin: const EdgeInsets.only(bottom: TSizes.spaceBtwItems),
             child: Stack(
               children: [
@@ -121,10 +117,23 @@ class _TSingleSessionState extends State<TSingleSession> {
                           Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: TSizes.sm / 2),
-                    Text(
-                      "${widget.session.occupied}/${widget.session.maxPeople} occupied",
-                      style: disabledTitleSmallStyle ??
-                          Theme.of(context).textTheme.titleSmall,
+                    FutureBuilder(
+                      future: _getOccupied(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const CircularProgressIndicator();
+                        } else if (snapshot.hasError) {
+                          return const Text(
+                              'Error fetching occupied seats count');
+                        } else {
+                          return Text(
+                            "${snapshot.data}/${widget.session.maxPeople} occupied",
+                            style: disabledTitleSmallStyle ??
+                                Theme.of(context).textTheme.titleSmall,
+                          );
+                        }
+                      },
                     ),
                     TUserProfileTile(
                       image: networkImage.isNotEmpty
@@ -143,30 +152,63 @@ class _TSingleSessionState extends State<TSingleSession> {
                 Positioned(
                   top: 25,
                   right: 5,
-                  child: GestureDetector(
-                    onTap: widget.iconsDisabled ?? false
-                        ? () {}
-                        : () {
-                            setState(() {
-                              _selectedSession = true;
-                            });
-                          },
-                    child: Icon(
-                      _selectedSession
-                          ? CupertinoIcons.check_mark_circled_solid
-                          : CupertinoIcons.check_mark_circled,
-                      size: 40,
-                      color: joinIconColor,
-                    ),
+                  child: FutureBuilder(
+                    future: _getOccupied(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const CircularProgressIndicator();
+                      } else if (snapshot.hasError) {
+                        return const Text(
+                            'Error fetching occupied seats count');
+                      } else {
+                        return GestureDetector(
+                          onTap: snapshot.data! >= widget.session.maxPeople ||
+                                  _selectedSession ||
+                                  widget.iconsDisabled == true
+                              ? () {}
+                              : () async {
+                                  sessionController.refreshData.toggle();
+                                  await attendanceController.addNewAttendance(
+                                    widget.session.id,
+                                    widget.session.date,
+                                    attendanceController.bringAFriend.value,
+                                  );
+                                  setState(() {
+                                    _selectedSession = true;
+                                  });
+                                },
+                          child: Icon(
+                            _selectedSession
+                                ? CupertinoIcons.check_mark_circled_solid
+                                : CupertinoIcons.check_mark_circled,
+                            size: 40,
+                            color: snapshot.data! >= widget.session.maxPeople ||
+                                    widget.iconsDisabled!
+                                ? Theme.of(context).disabledColor
+                                : dark
+                                    ? TColors.light
+                                    : TColors.dark,
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ),
                 Positioned(
                   top: 75,
                   right: 5,
                   child: GestureDetector(
-                    onTap: widget.iconsDisabled ?? false
+                    onTap: !_selectedSession || widget.iconsDisabled == true
                         ? () {}
-                        : () {
+                        : () async {
+                            sessionController.refreshData.toggle();
+                            await attendanceController
+                                .deleteAttendanceBySessionIdUserIdAndDate(
+                              widget.session.id,
+                              widget.session.date,
+                              attendanceController.bringAFriend.value,
+                            );
+                            attendanceController.bringAFriend.value = false;
                             setState(() {
                               _selectedSession = false;
                             });
@@ -174,7 +216,15 @@ class _TSingleSessionState extends State<TSingleSession> {
                     child: Icon(
                       CupertinoIcons.clear_circled,
                       size: 40,
-                      color: leaveIconColor,
+                      color: widget.iconsDisabled!
+                          ? Theme.of(context).disabledColor
+                          : dark
+                              ? _selectedSession
+                                  ? TColors.light
+                                  : TColors.light.withOpacity(0.5)
+                              : _selectedSession
+                                  ? TColors.dark
+                                  : TColors.dark.withOpacity(0.5),
                     ),
                   ),
                 ),
@@ -184,5 +234,11 @@ class _TSingleSessionState extends State<TSingleSession> {
         }
       },
     );
+  }
+
+  Future<int> _getOccupied() async {
+    final occupiedString = await SessionController.instance
+        .getSessionSingleField(widget.session.id, "Occupied");
+    return int.parse(occupiedString);
   }
 }

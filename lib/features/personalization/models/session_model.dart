@@ -15,6 +15,7 @@ class SessionModel {
     required this.repeat,
     required this.occupied,
     this.bringAFriend = false,
+    this.active = true,
   });
 
   String id;
@@ -29,6 +30,7 @@ class SessionModel {
   final String repeat;
   int occupied;
   bool bringAFriend;
+  bool active;
 
   static SessionModel empty() => SessionModel(
         id: '',
@@ -43,6 +45,7 @@ class SessionModel {
         repeat: '',
         bringAFriend: false,
         repeatId: '',
+        active: true,
       );
 
   Map<String, dynamic> toJson() {
@@ -59,6 +62,7 @@ class SessionModel {
       'Repeat': repeat,
       'BringAFriend': bringAFriend,
       'RepeatId': repeatId ?? '',
+      'Active': active,
     };
   }
 
@@ -76,6 +80,7 @@ class SessionModel {
       repeat: data['Repeat'] as String,
       bringAFriend: data['BringAFriend'] as bool,
       repeatId: data['RepeatId'] as String,
+      active: data['Active'] as bool,
     );
   }
 
@@ -94,6 +99,7 @@ class SessionModel {
       repeat: data['Repeat'] ?? '',
       bringAFriend: data['BringAFriend'] ?? '',
       repeatId: data['RepeatId'] ?? '',
+      active: data['Active'] ?? '',
     );
   }
 }

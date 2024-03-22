@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:kgf_app/app.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:kgf_app/data/repositories/authentication/authentication_repository.dart';
+import 'package:kgf_app/features/personalization/controllers/user_controller.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -24,6 +25,8 @@ Future<void> main() async {
   ).then(
     (FirebaseApp value) => Get.put(AuthenticationRepository()),
   );
+
+  Get.put(UserController());
 
   runApp(const App());
 }

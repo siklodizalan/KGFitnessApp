@@ -4,26 +4,45 @@ import "package:get/get.dart";
 import "package:iconsax/iconsax.dart";
 import "package:kgf_app/common/styles/disabled_style.dart";
 import "package:kgf_app/common/widgets/appbar/appbar.dart";
+import "package:kgf_app/common/widgets/buttons/toggle_switch_button.dart";
 import "package:kgf_app/common/widgets/list_tiles/settings_menu_tile.dart";
 import "package:kgf_app/common/widgets/list_tiles/user_profile_tile.dart";
 import "package:kgf_app/common/widgets/texts/section_heading.dart";
+import "package:kgf_app/features/personalization/controllers/attendance_controller.dart";
 import "package:kgf_app/features/personalization/controllers/session_controller.dart";
 import "package:kgf_app/features/personalization/controllers/user_controller.dart";
 import "package:kgf_app/features/personalization/models/session_model.dart";
+import "package:kgf_app/features/personalization/screens/session/add_new_session.dart";
 import "package:kgf_app/utils/constants/colors.dart";
 import "package:kgf_app/utils/constants/image_strings.dart";
 import "package:kgf_app/utils/constants/sizes.dart";
 import "package:kgf_app/utils/helpers/helper_functions.dart";
 
-class SessionDetailsScreen extends StatelessWidget {
-  const SessionDetailsScreen({
+class SessionDetailsScreen extends StatefulWidget {
+  SessionDetailsScreen({
     super.key,
     this.disabledButtons = false,
+    required this.selectedSession,
     required this.session,
-  });
+  }) : bringAFriend = RxBool(false);
 
   final bool? disabledButtons;
   final SessionModel session;
+  final bool selectedSession;
+  final RxBool bringAFriend;
+
+  @override
+  _SessionDetailsState createState() => _SessionDetailsState();
+}
+
+class _SessionDetailsState extends State<SessionDetailsScreen> {
+  late bool _selectedSession;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedSession = widget.selectedSession;
+  }
 
   Future<Map<String, dynamic>> _fetchUserData(String userId) async {
     final profilePicture = await UserController.instance
@@ -40,14 +59,15 @@ class SessionDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = THelperFunctions.isDarkMode(context);
-    final ButtonStyle? disabledElevatedButtonStyle =
-        DisabledStyle.getDisabledButtonStyle(
-            context, disabledButtons!, ElevatedButton.styleFrom());
     final ButtonStyle? disabledOutlinedButtonStyle =
         DisabledStyle.getDisabledButtonStyle(
-            context, disabledButtons!, OutlinedButton.styleFrom());
+            context, OutlinedButton.styleFrom());
+    final ButtonStyle? disabledElevatedButtonStyle =
+        DisabledStyle.getDisabledButtonStyle(
+            context, ElevatedButton.styleFrom());
     final userController = UserController.instance;
     final sessionController = SessionController.instance;
+    final attendanceController = AttendanceController.instance;
     return Scaffold(
       appBar: TAppBar(
         showBackArrow: true,
@@ -67,10 +87,26 @@ class SessionDetailsScreen extends StatelessWidget {
                     children: [
                       IconButton(
                           onPressed: () => sessionController
-                              .deleteSessionWarningPopup(session.id),
+                              .deleteSessionWarningPopup(widget.session.id),
                           icon: const Icon(CupertinoIcons.delete)),
                       IconButton(
-                          onPressed: () {}, icon: const Icon(Iconsax.edit)),
+                          onPressed: () async => (widget.session.repeatId ==
+                                      "" ||
+                                  widget.session.repeatId == null)
+                              ? {
+                                  await sessionController
+                                      .setUpEditSession(widget.session.id),
+                                  Get.to(
+                                    () => AddNewSessionScreen(
+                                      sessionId: widget.session.id,
+                                      repeatId: widget.session.repeatId,
+                                      editAllRepeat: false,
+                                    ),
+                                  ),
+                                }
+                              : sessionController.editSessionChoosePopup(
+                                  widget.session.id, widget.session.repeatId!),
+                          icon: const Icon(Iconsax.edit)),
                     ],
                   ),
                 );
@@ -87,31 +123,49 @@ class SessionDetailsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (userController.user.value.role == "COACH" ||
+                  userController.user.value.role == "ADMIN")
+                ToggleSwitchButton(sessionId: widget.session.id),
+              if (userController.user.value.role == "COACH" ||
+                  userController.user.value.role == "ADMIN")
+                const Divider(),
               Image(
                 height: 60,
                 image: AssetImage(
                     dark ? TImages.darkAppLogo : TImages.lightAppLogo),
               ),
               TSectionHeading(
-                title: session.title,
+                title: widget.session.title,
                 showActionButton: false,
               ),
               TSettingsMenuTile(
                 icon: Iconsax.clock,
                 title: "Time",
-                subTitle: "${session.fromTime} - ${session.toTime}",
+                subTitle:
+                    "${widget.session.fromTime} - ${widget.session.toTime}",
                 onTap: null,
               ),
-              TSettingsMenuTile(
-                icon: Iconsax.people,
-                title: "Occupied",
-                subTitle: "${session.occupied}/${session.maxPeople}",
-                onTap: null,
+              FutureBuilder(
+                future: _getOccupied(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return const Text('Error fetching occupied seats count');
+                  } else {
+                    return TSettingsMenuTile(
+                      icon: Iconsax.people,
+                      title: "Occupied",
+                      subTitle: "${snapshot.data}/${widget.session.maxPeople}",
+                      onTap: null,
+                    );
+                  }
+                },
               ),
               TSettingsMenuTile(
                 icon: CupertinoIcons.chevron_right,
                 title: "Minimum People",
-                subTitle: "${session.minPeople}",
+                subTitle: "${widget.session.minPeople}",
                 onTap: null,
               ),
               const TSettingsMenuTile(
@@ -127,7 +181,7 @@ class SessionDetailsScreen extends StatelessWidget {
                 showActionButton: false,
               ),
               FutureBuilder(
-                future: _fetchUserData(session.userId),
+                future: _fetchUserData(widget.session.userId),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const CircularProgressIndicator();
@@ -152,16 +206,24 @@ class SessionDetailsScreen extends StatelessWidget {
                   }
                 },
               ),
-              if (session.bringAFriend == true) const Divider(),
-              if (session.bringAFriend == true)
+              if (widget.session.bringAFriend == true) const Divider(),
+              if (widget.session.bringAFriend == true)
                 Row(
                   children: [
                     SizedBox(
                       width: 32,
                       height: 32,
-                      child: Checkbox(
-                        value: false,
-                        onChanged: disabledButtons ?? true ? null : (value) {},
+                      child: Obx(
+                        () => Checkbox(
+                          value: attendanceController.bringAFriend.value,
+                          onChanged: widget.disabledButtons ?? true
+                              ? null
+                              : _selectedSession
+                                  ? null
+                                  : (value) => attendanceController
+                                          .bringAFriend.value =
+                                      !attendanceController.bringAFriend.value,
+                        ),
                       ),
                     ),
                     const SizedBox(width: TSizes.spaceBtwItems / 2),
@@ -171,30 +233,78 @@ class SessionDetailsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-              if (session.bringAFriend == true)
+              if (widget.session.bringAFriend == true)
                 const SizedBox(height: TSizes.spaceBtwItems),
-              if (session.bringAFriend == false)
+              if (widget.session.bringAFriend == false)
                 const SizedBox(height: TSizes.spaceBtwSections),
               Padding(
                 padding: const EdgeInsets.all(TSizes.spaceBtwItems),
                 child: Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton(
-                        onPressed: disabledButtons ?? true ? null : () {},
-                        style: disabledButtons ?? true
-                            ? disabledElevatedButtonStyle
-                            : null,
-                        child: const Text('JOIN'),
+                      child: FutureBuilder(
+                        future: _getOccupied(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const CircularProgressIndicator();
+                          } else if (snapshot.hasError) {
+                            return const Text(
+                                'Error fetching occupied seats count');
+                          } else {
+                            return ElevatedButton(
+                              onPressed: snapshot.data! >=
+                                          widget.session.maxPeople ||
+                                      _selectedSession ||
+                                      widget.disabledButtons == true
+                                  ? () {}
+                                  : () async {
+                                      sessionController.refreshData.toggle();
+                                      await attendanceController
+                                          .addNewAttendance(
+                                        widget.session.id,
+                                        widget.session.date,
+                                        attendanceController.bringAFriend.value,
+                                      );
+                                      setState(() {
+                                        _selectedSession = true;
+                                      });
+                                    },
+                              style:
+                                  snapshot.data! >= widget.session.maxPeople ||
+                                          _selectedSession ||
+                                          widget.disabledButtons == true
+                                      ? disabledElevatedButtonStyle
+                                      : null,
+                              child: const Text('JOIN'),
+                            );
+                          }
+                        },
                       ),
                     ),
                     const SizedBox(width: TSizes.spaceBtwItems),
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: disabledButtons ?? true ? null : () {},
-                        style: disabledButtons ?? true
-                            ? disabledOutlinedButtonStyle
-                            : null,
+                        onPressed: !_selectedSession ||
+                                widget.disabledButtons == true
+                            ? () {}
+                            : () async {
+                                sessionController.refreshData.toggle();
+                                await attendanceController
+                                    .deleteAttendanceBySessionIdUserIdAndDate(
+                                  widget.session.id,
+                                  widget.session.date,
+                                  attendanceController.bringAFriend.value,
+                                );
+                                attendanceController.bringAFriend.value = false;
+                                setState(() {
+                                  _selectedSession = false;
+                                });
+                              },
+                        style:
+                            !_selectedSession || widget.disabledButtons == true
+                                ? disabledOutlinedButtonStyle
+                                : null,
                         child: const Text('LEAVE'),
                       ),
                     ),
@@ -206,5 +316,11 @@ class SessionDetailsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<int> _getOccupied() async {
+    final occupiedString = await SessionController.instance
+        .getSessionSingleField(widget.session.id, "Occupied");
+    return int.parse(occupiedString);
   }
 }

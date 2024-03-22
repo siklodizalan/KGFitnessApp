@@ -15,14 +15,10 @@ class DisabledStyle {
   }
 
   static ButtonStyle? getDisabledButtonStyle(
-      BuildContext context, bool disabled, ButtonStyle? baseButtonStyle) {
-    if (disabled) {
-      return baseButtonStyle?.copyWith(
-          backgroundColor:
-              MaterialStateProperty.all<Color>(Theme.of(context).disabledColor),
-          foregroundColor: MaterialStateProperty.all<Color>(TColors.lightGrey));
-    } else {
-      return null;
-    }
+      BuildContext context, ButtonStyle? baseButtonStyle) {
+    return baseButtonStyle?.copyWith(
+        backgroundColor:
+            MaterialStateProperty.all<Color>(Theme.of(context).disabledColor),
+        foregroundColor: MaterialStateProperty.all<Color>(TColors.lightGrey));
   }
 }
